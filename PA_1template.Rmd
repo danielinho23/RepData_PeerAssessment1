@@ -1,0 +1,133 @@
+---
+title: "Quantified Self Movement Analysis"
+date: "14/1/2021"
+output: html_document
+---
+
+This document contents the next items to be evaluated:
+
+  1. Code for reading in the dataset and/or processing the data
+  2. Histogram of the total number of steps taken each day
+  3. Mean and median number of steps taken each day
+  4. Time series plot of the average number of steps taken
+  5. The 5-minute interval that, on average, contains the maximum number of steps
+  6. Code to describe and show a strategy for imputing missing data
+  7. Histogram of the total number of steps taken each day after missing values are imputed
+  8. Panel plot comparing the average number of steps taken per 5-minute interval across     weekdays and weekends
+  9.  All of the R code needed to reproduce the results (numbers, plots, etc.) in the report
+
+Loading the libraries to handle the data
+
+```{r, echo=TRUE, results='asis'}
+library(dplyr)
+library(ggplot2)
+```
+
+1. Loading and preprocessing the data
+
+    ```{r setup, echo=TRUE}
+    activity<- read.csv("activity.csv", header = T)
+    ```
+
+2. What is mean total number of steps taken per day?
+
+
+    ```{r, echo=TRUE}
+    activity1<- activity %>%
+      group_by(date) %>%
+      summarise(TSteps = sum(steps))
+    
+    hist(activity1$TSteps,
+         main = "Total Steps per Day",
+         xlab = "Number of Steps")
+    ```
+     
+3. Calculate and report the mean and median of the total number of steps taken per day.
+
+    ```{r, echo=TRUE}
+    activity2<- activity %>%
+      group_by(date) %>%
+      summarise(Mean = mean(steps, na.rm=T),
+                Median = median(steps, na.rm = T))%>%
+      print()
+    ```
+  
+4. What is the average daily activity pattern?
+
+    ```{r, echo=TRUE}
+    activity3<- activity %>%
+      group_by(interval) %>%
+      summarise(Mean = mean(steps, na.rm = TRUE))
+    
+    plot(activity3$interval, activity3$Mean, type="l", xlab="5-minute Interval", ylab="Average Number Steps")
+    
+    ```
+
+5. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+    ```{r, echo=TRUE}
+    activity3[which.max(activity3$Mean),]
+    ```
+
+6. Code to describe and show a strategy for imputing missing data
+
+    This code replaces the missing values for the calculated mean by interval obtained in the point 4:
+    
+    ```{r, echo=TRUE}
+    missingValues <- is.na(activity$steps)
+    activity4 <- transform(activity,
+                              steps = ifelse(is.na(activity$steps),
+                                             activity3$Mean[match(activity$interval, 
+                                                                        activity3$interval)],
+                                             activity$steps))
+    ```
+
+7. Histogram of the total number of steps taken each day after missing values are imputed
+
+    ```{r, echo=TRUE}
+    activity5<- activity4 %>%
+      group_by(date) %>%
+      summarise(TSteps = sum(steps))
+    
+    hist(activity5$TSteps,
+         main = "Total Steps per Day",
+         xlab = "Number of Steps")
+    ```
+8. Panel plot comparing the average number of steps taken per 5-minute interval across     weekdays and weekends
+
+    Factoring the data in weekdays and weekends with the function below:
+
+    ```{r, echo=TRUE}
+    Day <- function(date) {
+      day <- weekdays(date)
+      if (day %in% c('lunes', 'martes', 'miércoles', 'jueves', 'viernes'))
+        return ("weekeday")
+      else if (day %in% c('sábado', 'domingo'))
+        return ("weekend")
+      else
+        stop ("Invalid Date Format.")
+    }
+    ```
+
+    Applying the function to the data creating a new column "day":
+    
+    ```{r, echo=TRUE}
+    activity4$date <- as.Date(activity4$date)
+    activity4$day <- sapply(activity4$date, FUN = Day)
+    ```
+    
+    Plotting the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis) for the imputing data. 
+
+    ```{r, echo=TRUE}
+    activity6<- activity4 %>%
+      group_by(day, interval) %>%
+      summarise(Mean = mean(steps, na.rm = TRUE))
+    
+    ggplot(activity6, aes(interval, Mean)) + 
+      geom_line() +
+      facet_grid(day ~ .) +
+      ggtitle("Average Daily Activity Pattern") +
+      xlab("5-minute Interval") +
+      ylab("Average Number of Steps") +
+      theme(plot.title = element_text(hjust = 0.5))
+    ```
