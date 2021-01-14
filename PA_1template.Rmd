@@ -1,7 +1,9 @@
 ---
 title: "Quantified Self Movement Analysis"
 date: "14/1/2021"
-output: html_document
+output:
+  html_document: default
+  #md_document: default
 ---
 
 This document contents the next items to be evaluated:
